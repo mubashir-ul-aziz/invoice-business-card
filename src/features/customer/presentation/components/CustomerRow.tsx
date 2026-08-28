@@ -8,10 +8,11 @@ import { formatCurrency } from '../../../../core/utils/currencyFormatter';
 interface CustomerRowProps {
   customer: Customer;
   balance: number;
+  invoiceCount: number;
   onPress: () => void;
 }
 
-export function CustomerRow({ customer, balance, onPress }: CustomerRowProps) {
+export function CustomerRow({ customer, balance, invoiceCount, onPress }: CustomerRowProps) {
   const hasBalance = balance > 0;
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} accessibilityRole="button">
@@ -19,6 +20,7 @@ export function CustomerRow({ customer, balance, onPress }: CustomerRowProps) {
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{customer.name}</Text>
         <Text style={styles.meta} numberOfLines={1}>{customer.email ?? customer.phone ?? 'No contact info'}</Text>
+        <Text style={styles.invoiceCount}>{invoiceCount} {invoiceCount === 1 ? 'invoice' : 'invoices'}</Text>
       </View>
       <View style={styles.balanceWrap}>
         <Text style={[styles.balance, hasBalance && styles.balanceDue]}>
@@ -42,6 +44,7 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   name: { ...theme.typography.bodyStrong, color: theme.colors.textPrimary },
   meta: { ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 },
+  invoiceCount: { ...theme.typography.caption, color: theme.colors.textTertiary, marginTop: 2 },
   balanceWrap: { alignItems: 'flex-end' },
   balance: { ...theme.typography.bodyStrong, color: theme.colors.textSecondary },
   balanceDue: { color: theme.colors.warning },

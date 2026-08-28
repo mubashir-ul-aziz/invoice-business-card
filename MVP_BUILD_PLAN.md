@@ -112,7 +112,7 @@ src/
 
   core/
     constants/
-      invoiceFieldVocabulary.ts  # shared field-key vocabulary (quantity, unit, weight, length, width, height, discount, tax)
+      invoiceFieldVocabulary.ts  # shared field-key vocabulary, grouped: item details, pricing/calculations, measurements (Section 27)
     utils/
       currencyFormatter.ts
       dateFormatter.ts
@@ -710,7 +710,7 @@ elif remaining <= 0:
 
 ## 27. Invoice-Type Architecture
 
-- `InvoiceType.enabledFields` is a JSON array of field keys from a fixed vocabulary defined once in `src/core/constants/invoiceFieldVocabulary.ts`: `quantity, unit, weight, length, width, height, discount, tax`.
+- `InvoiceType.enabledFields` is a JSON array of field keys from a fixed vocabulary defined once in `src/core/constants/invoiceFieldVocabulary.ts`, grouped as: **Item Details** (`itemName, description, sku`), **Pricing & Calculations** (`unitPrice, quantity, discount, tax`), **Measurements** (`unit, weight, length, width, height`). `itemName` and `unitPrice` are structural (every Item always has a name and a price, Section 7) and are always included/locked-on wherever fields are toggled (Phase 6, Screen 6); every other key is a genuine per-invoice-type choice.
 - The 5 initial types are seeded on first run as system-defined rows (`isSystemDefined = true`):
   - General: quantity, unit, discount, tax
   - Quantity: quantity, unit, discount, tax (alias/refinement of General per product spec)

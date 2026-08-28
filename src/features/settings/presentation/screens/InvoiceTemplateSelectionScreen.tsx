@@ -7,15 +7,19 @@ import { ScreenHeader } from '../../../../core/components/ScreenHeader';
 import { Card } from '../../../../core/components/Card';
 import { AppButton } from '../../../../core/components/AppButton';
 import { useAppNavigation } from '../../../../app/navigation/hooks';
-import { mockAppSettings, mockInvoiceTemplates } from '../../data/datasources/mock/mockSettings';
+import { mockInvoiceTemplates } from '../../data/datasources/mock/mockSettings';
 import { mockBusiness } from '../../../business/data/datasources/mock/mockBusiness';
 import { useResponsive } from '../../../../app/theme/useResponsive';
+import { useSettingsStore } from '../state/settingsStore';
 
 /** Screen 24 — choose the visual PDF template, with a live-ish preview (Section 16). */
 export function InvoiceTemplateSelectionScreen() {
   const navigation = useAppNavigation();
   const { columns } = useResponsive();
-  const [selectedId, setSelectedId] = useState(mockAppSettings.invoiceTemplateId);
+  const invoiceTemplateId = useSettingsStore((state) => state.invoiceTemplateId);
+  const updateSettings = useSettingsStore((state) => state.update);
+  const savingSettings = useSettingsStore((state) => state.status === 'saving');
+  const [selectedId, setSelectedId] = useState(invoiceTemplateId);
 
   return (
     <ScreenContainer>
@@ -61,7 +65,15 @@ export function InvoiceTemplateSelectionScreen() {
           );
         }}
       />
-      <AppButton label={`Use for ${mockBusiness.name}`} onPress={() => navigation.goBack()} style={styles.saveButton} />
+      <AppButton
+        label={`Use for ${mockBusiness.name}`}
+        loading={savingSettings}
+        onPress={async () => {
+          await updateSettings({ invoiceTemplateId: selectedId });
+          navigation.goBack();
+        }}
+        style={styles.saveButton}
+      />
     </ScreenContainer>
   );
 }

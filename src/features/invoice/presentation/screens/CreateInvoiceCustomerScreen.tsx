@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
 import { ScreenHeader } from '../../../../core/components/ScreenHeader';
@@ -7,30 +8,69 @@ import { SearchBar } from '../../../../core/components/SearchBar';
 import { AppButton } from '../../../../core/components/AppButton';
 import { Chip } from '../../../../core/components/Chip';
 import { Avatar } from '../../../../core/components/Avatar';
+import { LoadingState } from '../../../../core/components/LoadingState';
 import { useAppNavigation } from '../../../../app/navigation/hooks';
-import { mockCustomers } from '../../../customer/data/datasources/mock/mockCustomers';
-import { mockInvoiceTypes } from '../../../invoiceType/data/datasources/mock/mockInvoiceTypes';
 import { mockBusiness } from '../../../business/data/datasources/mock/mockBusiness';
 import { formatDate } from '../../../../core/utils/dateFormatter';
 import { WizardSteps } from '../components/WizardSteps';
+import { useInvoiceFormStore } from '../state/invoiceFormStore';
 
 /** Screen 14 — Create Invoice, step 1: pick customer + invoice metadata (Section 16). */
 export function CreateInvoiceCustomerScreen() {
   const navigation = useAppNavigation();
   const [query, setQuery] = useState('');
-  const [customerId, setCustomerId] = useState<string | undefined>(undefined);
-  const [invoiceTypeId, setInvoiceTypeId] = useState(mockBusiness.defaultInvoiceTypeId ?? mockInvoiceTypes[0].id);
 
-  const today = useMemo(() => new Date('2026-08-27'), []);
-  const dueDate = useMemo(() => new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000), [today]);
+  const {
+    customers,
+    invoiceTypes,
+    referenceStatus,
+    customerId,
+    invoiceTypeId,
+    issueDate,
+    dueDate,
+    loadReferenceData,
+    startNew,
+    setCustomerId,
+    setInvoiceTypeId,
+  } = useInvoiceFormStore();
+
+  useEffect(() => {
+    // Fresh entry into the wizard — clears any leftover draft from a
+    // previously completed/abandoned invoice. Runs once on mount only, so
+    // returning here from "Add new customer" below doesn't wipe selections.
+    startNew();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-fetch on every focus (not just mount) so a customer added via
+  // "+ Add new customer" shows up immediately on return, without disturbing
+  // the customer/type already chosen (loadReferenceData never touches those).
+  useFocusEffect(
+    useCallback(() => {
+      loadReferenceData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   const filteredCustomers = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return mockCustomers;
-    return mockCustomers.filter((c) => c.name.toLowerCase().includes(q));
-  }, [query]);
+    if (!q) return customers;
+    return customers.filter(
+      (c) => c.name.toLowerCase().includes(q) || (c.email?.toLowerCase().includes(q) ?? false) || (c.phone?.toLowerCase().includes(q) ?? false),
+    );
+  }, [customers, query]);
 
   const nextInvoiceNumber = `${mockBusiness.invoicePrefix}${mockBusiness.nextInvoiceNumber}`;
+
+  if (referenceStatus === 'loading' || referenceStatus === 'idle') {
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="New Invoice" subtitle={nextInvoiceNumber} onBack={() => navigation.goBack()} />
+        <WizardSteps currentStep={0} />
+        <LoadingState label="Loading customers…" />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer>
@@ -50,7 +90,7 @@ export function CreateInvoiceCustomerScreen() {
             style={styles.newCustomerLink}
             onPress={() => navigation.navigate('CreateCustomer', undefined)}
           >
-            + New Customer
+            + Add new customer
           </Text>
         }
         renderItem={({ item }) => {
@@ -71,7 +111,7 @@ export function CreateInvoiceCustomerScreen() {
 
       <Text style={styles.fieldLabel}>Invoice type</Text>
       <View style={styles.chipRow}>
-        {mockInvoiceTypes.map((type) => (
+        {invoiceTypes.map((type) => (
           <Chip key={type.id} label={type.name} selected={invoiceTypeId === type.id} onPress={() => setInvoiceTypeId(type.id)} />
         ))}
       </View>
@@ -79,26 +119,18 @@ export function CreateInvoiceCustomerScreen() {
       <View style={styles.dateRow}>
         <View style={styles.dateBox}>
           <Text style={styles.dateLabel}>Issue date</Text>
-          <Text style={styles.dateValue}>{formatDate(today)}</Text>
+          <Text style={styles.dateValue}>{formatDate(new Date(issueDate))}</Text>
         </View>
         <View style={styles.dateBox}>
           <Text style={styles.dateLabel}>Due date</Text>
-          <Text style={styles.dateValue}>{formatDate(dueDate)}</Text>
+          <Text style={styles.dateValue}>{dueDate ? formatDate(new Date(dueDate)) : '—'}</Text>
         </View>
       </View>
 
       <AppButton
         label="Next: Add Items"
         disabled={!customerId}
-        onPress={() =>
-          customerId &&
-          navigation.navigate('CreateInvoiceItems', {
-            customerId,
-            invoiceTypeId,
-            issueDate: today.toISOString(),
-            dueDate: dueDate.toISOString(),
-          })
-        }
+        onPress={() => navigation.navigate('CreateInvoiceItems', undefined)}
         style={styles.nextButton}
       />
     </ScreenContainer>

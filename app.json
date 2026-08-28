@@ -7,7 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["whatsapp"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +23,17 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Invora to access your photos so you can save your QR code and invoices.",
+          "savePhotosPermission": "Allow Invora to save your QR code and invoices to your photo library.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
+    ]
   }
 }

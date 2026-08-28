@@ -34,19 +34,21 @@ export type RootStackParamList = {
   CustomerDetail: { customerId: string };
   CustomerHistory: { customerId: string };
   CreateInvoiceCustomer: undefined;
-  CreateInvoiceItems: {
-    customerId: string;
-    invoiceTypeId: string;
-    issueDate: string;
-    dueDate?: string;
-  };
-  InvoiceReview: {
-    customerId: string;
-    invoiceTypeId: string;
-    issueDate: string;
-    dueDate?: string;
-    lines: DraftInvoiceLine[];
-  };
+  /**
+   * Undefined for the normal Step 1 -> Step 2 handoff (the draft already
+   * lives in `invoiceFormStore`). A direct entry point (e.g. Customer
+   * Detail's "New Invoice" quick action, which skips Step 1) passes a
+   * preset here instead, seeding a fresh draft for that customer.
+   */
+  CreateInvoiceItems:
+    | {
+        customerId: string;
+        invoiceTypeId?: string;
+        issueDate?: string;
+        dueDate?: string;
+      }
+    | undefined;
+  InvoiceReview: undefined;
   InvoiceDetail: { invoiceId: string };
   RecordPayment: { invoiceId: string };
   InvoiceSharing: { invoiceId: string };

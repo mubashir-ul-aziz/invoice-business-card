@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
@@ -6,84 +6,199 @@ import { ScreenHeader } from '../../../../core/components/ScreenHeader';
 import { AppTextField } from '../../../../core/components/AppTextField';
 import { AppButton } from '../../../../core/components/AppButton';
 import { Chip } from '../../../../core/components/Chip';
+import { LoadingState } from '../../../../core/components/LoadingState';
+import { ErrorState } from '../../../../core/components/ErrorState';
 import { useAppNavigation, useAppRoute } from '../../../../app/navigation/hooks';
-import { mockItems } from '../../data/datasources/mock/mockItems';
-import { mockInvoiceTypes } from '../../../invoiceType/data/datasources/mock/mockInvoiceTypes';
 import { invoiceTypeHasField } from '../../../invoiceType/domain/usecases/resolveInvoiceTypeFields';
+import { useItemFormStore } from '../state/itemFormStore';
 
-/** Screen 8 — Create/Edit Item, with fields conditional on the selected invoice type (Section 16, 27). */
+/** Screen 8 — Create/Edit Item, with fields conditional on the selected invoice type (Section 16, 27, Phase 7). */
 export function CreateItemScreen() {
   const navigation = useAppNavigation();
   const route = useAppRoute<'CreateItem'>();
-  const existing = route.params?.itemId ? mockItems.find((i) => i.id === route.params?.itemId) : undefined;
-  const isEdit = !!existing;
+  const itemId = route.params?.itemId;
+  const isEdit = !!itemId;
 
-  const [name, setName] = useState(existing?.name ?? '');
-  const [description, setDescription] = useState(existing?.description ?? '');
-  const [sku, setSku] = useState(existing?.sku ?? '');
-  const [unit, setUnit] = useState(existing?.unit ?? '');
-  const [price, setPrice] = useState(existing ? String(existing.defaultPrice) : '');
-  const [taxRate, setTaxRate] = useState(existing?.taxRate != null ? String(existing.taxRate) : '');
-  const [weight, setWeight] = useState(existing?.weight != null ? String(existing.weight) : '');
-  const [length, setLength] = useState(existing?.length != null ? String(existing.length) : '');
-  const [width, setWidth] = useState(existing?.width != null ? String(existing.width) : '');
-  const [height, setHeight] = useState(existing?.height != null ? String(existing.height) : '');
-  const [invoiceTypeId, setInvoiceTypeId] = useState(existing?.invoiceTypeId ?? mockInvoiceTypes[0].id);
+  const {
+    name,
+    description,
+    sku,
+    unit,
+    defaultPrice,
+    taxRate,
+    weight,
+    length,
+    width,
+    height,
+    invoiceTypeId,
+    status,
+    invoiceTypes,
+    fieldErrors,
+    errorMessage,
+    setField,
+    startCreate,
+    loadForEdit,
+    save,
+  } = useItemFormStore();
 
-  const selectedType = useMemo(() => mockInvoiceTypes.find((t) => t.id === invoiceTypeId), [invoiceTypeId]);
-  const nameError = name.trim().length === 0 ? 'Item name is required' : undefined;
-  const priceError = price.trim().length > 0 && Number.isNaN(Number(price)) ? 'Enter a valid price' : undefined;
+  useEffect(() => {
+    if (itemId) {
+      loadForEdit(itemId);
+    } else {
+      startCreate();
+    }
+    // Only re-run if the screen's target item actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemId]);
+
+  const selectedType = useMemo(
+    () => invoiceTypes.find((type) => type.id === invoiceTypeId),
+    [invoiceTypes, invoiceTypeId],
+  );
+
+  const nameError = fieldErrors.name || (name.trim().length === 0 ? 'Item name is required' : undefined);
+  const priceError =
+    fieldErrors.defaultPrice ||
+    (defaultPrice.trim().length === 0
+      ? 'Default price is required'
+      : Number.isNaN(Number(defaultPrice))
+        ? 'Enter a valid price'
+        : undefined);
+  const canSave = !nameError && !priceError && status !== 'saving';
+
+  async function handleSave() {
+    const saved = await save();
+    if (saved) navigation.goBack();
+  }
+
+  if (status === 'loading') {
+    return (
+      <ScreenContainer>
+        <ScreenHeader title={isEdit ? 'Edit Item' : 'Add Item'} onBack={() => navigation.goBack()} />
+        <LoadingState label="Loading item…" />
+      </ScreenContainer>
+    );
+  }
+
+  if (isEdit && status === 'error' && !name) {
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="Edit Item" onBack={() => navigation.goBack()} />
+        <ErrorState message={errorMessage || 'Could not load this item.'} onRetry={() => loadForEdit(itemId!)} />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer scroll>
       <ScreenHeader title={isEdit ? 'Edit Item' : 'Add Item'} onBack={() => navigation.goBack()} />
 
-      <AppTextField label="Item name *" placeholder="e.g. Consulting Session" value={name} onChangeText={setName} errorText={nameError} />
-      <AppTextField label="Description" placeholder="Optional" value={description} onChangeText={setDescription} multiline />
-      <AppTextField label="SKU" placeholder="Optional" value={sku} onChangeText={setSku} />
+      <AppTextField
+        label="Item name *"
+        placeholder="e.g. Consulting Session"
+        value={name}
+        onChangeText={(text) => setField('name', text)}
+        errorText={nameError}
+      />
+      <AppTextField
+        label="Description"
+        placeholder="Optional"
+        value={description}
+        onChangeText={(text) => setField('description', text)}
+        multiline
+      />
+      <AppTextField label="SKU / Code" placeholder="Optional" value={sku} onChangeText={(text) => setField('sku', text)} />
 
       <Text style={styles.fieldLabel}>Invoice type</Text>
       <View style={styles.chipRow}>
-        {mockInvoiceTypes.map((type) => (
-          <Chip key={type.id} label={type.name} selected={invoiceTypeId === type.id} onPress={() => setInvoiceTypeId(type.id)} />
+        {invoiceTypes.map((type) => (
+          <Chip
+            key={type.id}
+            label={type.name}
+            selected={invoiceTypeId === type.id}
+            onPress={() => setField('invoiceTypeId', type.id)}
+          />
         ))}
       </View>
 
       <View style={styles.row}>
-        <AppTextField label="Unit" placeholder="pcs, kg, hr" value={unit} onChangeText={setUnit} containerStyle={styles.rowField} />
+        <AppTextField
+          label="Unit"
+          placeholder="pcs, kg, hr"
+          value={unit}
+          onChangeText={(text) => setField('unit', text)}
+          containerStyle={styles.rowField}
+        />
         <AppTextField
           label="Default price *"
           placeholder="0.00"
           keyboardType="decimal-pad"
-          value={price}
-          onChangeText={setPrice}
+          value={defaultPrice}
+          onChangeText={(text) => setField('defaultPrice', text)}
           errorText={priceError}
           containerStyle={styles.rowField}
         />
       </View>
 
       {invoiceTypeHasField(selectedType, 'tax') ? (
-        <AppTextField label="Tax rate (%)" placeholder="0" keyboardType="decimal-pad" value={taxRate} onChangeText={setTaxRate} />
+        <AppTextField
+          label="Tax rate (%)"
+          placeholder="0"
+          keyboardType="decimal-pad"
+          value={taxRate}
+          onChangeText={(text) => setField('taxRate', text)}
+        />
       ) : null}
 
       {invoiceTypeHasField(selectedType, 'weight') ? (
-        <AppTextField label="Weight (kg)" placeholder="0.00" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
+        <AppTextField
+          label="Weight (kg)"
+          placeholder="0.00"
+          keyboardType="decimal-pad"
+          value={weight}
+          onChangeText={(text) => setField('weight', text)}
+        />
       ) : null}
 
-      {invoiceTypeHasField(selectedType, 'length') && invoiceTypeHasField(selectedType, 'width') && invoiceTypeHasField(selectedType, 'height') ? (
+      {invoiceTypeHasField(selectedType, 'length') &&
+      invoiceTypeHasField(selectedType, 'width') &&
+      invoiceTypeHasField(selectedType, 'height') ? (
         <View style={styles.row}>
-          <AppTextField label="Length" keyboardType="decimal-pad" value={length} onChangeText={setLength} containerStyle={styles.rowFieldThird} />
-          <AppTextField label="Width" keyboardType="decimal-pad" value={width} onChangeText={setWidth} containerStyle={styles.rowFieldThird} />
-          <AppTextField label="Height" keyboardType="decimal-pad" value={height} onChangeText={setHeight} containerStyle={styles.rowFieldThird} />
+          <AppTextField
+            label="Length"
+            keyboardType="decimal-pad"
+            value={length}
+            onChangeText={(text) => setField('length', text)}
+            containerStyle={styles.rowFieldThird}
+          />
+          <AppTextField
+            label="Width"
+            keyboardType="decimal-pad"
+            value={width}
+            onChangeText={(text) => setField('width', text)}
+            containerStyle={styles.rowFieldThird}
+          />
+          <AppTextField
+            label="Height"
+            keyboardType="decimal-pad"
+            value={height}
+            onChangeText={(text) => setField('height', text)}
+            containerStyle={styles.rowFieldThird}
+          />
         </View>
+      ) : null}
+
+      {status === 'error' && errorMessage && Object.keys(fieldErrors).length === 0 ? (
+        <Text style={styles.formError}>{errorMessage}</Text>
       ) : null}
 
       <View style={styles.actions}>
         <AppButton label="Cancel" variant="secondary" onPress={() => navigation.goBack()} style={styles.actionButton} />
         <AppButton
           label="Save Item"
-          disabled={!!nameError || !!priceError}
-          onPress={() => navigation.goBack()}
+          disabled={!canSave}
+          loading={status === 'saving'}
+          onPress={handleSave}
           style={styles.actionButton}
         />
       </View>
@@ -97,6 +212,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: theme.spacing.sm },
   rowField: { flex: 1 },
   rowFieldThird: { flex: 1 },
+  formError: { ...theme.typography.caption, color: theme.colors.danger, marginBottom: theme.spacing.sm },
   actions: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.md, marginBottom: theme.spacing.xl },
   actionButton: { flex: 1 },
 });

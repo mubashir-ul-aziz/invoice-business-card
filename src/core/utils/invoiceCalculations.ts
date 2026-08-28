@@ -66,6 +66,26 @@ export function computeInvoiceTotals(items: InvoiceItemInput[]): InvoiceTotals {
   };
 }
 
+/**
+ * Human-readable "how many × unit" line shown under an item's name on
+ * Invoice Review/Detail (Section 16, Screens 16/17) — handles the
+ * quantity/weight/dimension variants the same way `resolveQuantityEquivalent`
+ * does, so the two screens never diverge on how a line reads.
+ */
+export function describeInvoiceLineQuantity(item: InvoiceItemInput & { unitSnapshot?: string }): string {
+  if (item.length != null && item.width != null && item.height != null) {
+    const qtyPrefix = item.quantity != null && item.quantity !== 1 ? `${item.quantity} × ` : '';
+    return `${qtyPrefix}${item.length}×${item.width}×${item.height} ${item.unitSnapshot ?? ''}`.trim();
+  }
+  if (item.weight != null) {
+    return `${item.weight} ${item.unitSnapshot ?? 'kg'}`;
+  }
+  if (item.quantity != null) {
+    return `${item.quantity} ${item.unitSnapshot ?? ''}`.trim();
+  }
+  return item.unitSnapshot ?? '1 unit';
+}
+
 /** Derives invoice status from payments and due date — never manually set (Section 26). */
 export function deriveInvoiceStatus(total: number, totalPaid: number, dueDate: string | undefined, now: Date = new Date()): InvoiceStatus {
   const remaining = roundMoney(total - totalPaid);
