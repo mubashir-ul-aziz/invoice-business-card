@@ -36,6 +36,10 @@ function validate(input: RecordPaymentInput): Record<string, string> {
  * creates.
  */
 export class MockPaymentRepository implements PaymentRepository {
+  async getPayments(): Promise<Result<Payment[], Failure>> {
+    return delay(ok([...mockPayments]));
+  }
+
   async getPaymentsForInvoice(invoiceId: string): Promise<Result<Payment[], Failure>> {
     const payments = mockPayments
       .filter((payment) => payment.invoiceId === invoiceId)

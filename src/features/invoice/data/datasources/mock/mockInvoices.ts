@@ -2,8 +2,6 @@ import { Invoice, InvoiceItem } from '../../../domain/entities/Invoice';
 import { computeInvoiceTotals, computeLineTotal, deriveInvoiceStatus, InvoiceItemInput } from '../../../../../core/utils/invoiceCalculations';
 import { totalPaidForInvoice } from '../../../../../core/utils/customerBalance';
 import { mockPayments } from '../../../../payment/data/datasources/mock/mockPayments';
-import { mockBusiness } from '../../../../business/data/datasources/mock/mockBusiness';
-import { generateId } from '../../../../../core/utils/idGenerator';
 
 /** "Now" is pinned so overdue/unpaid status derivation is stable across renders in this mock phase. */
 export const MOCK_TODAY = new Date('2026-08-27');
@@ -171,37 +169,9 @@ export function getInvoiceById(id: string): Invoice | undefined {
   return mockInvoices.find((invoice) => invoice.id === id);
 }
 
-export interface CreateInvoiceInput {
-  customerId: string;
-  invoiceTypeId: string;
-  issueDate: string;
-  dueDate?: string;
-  notes?: string;
-  terms?: string;
-  lines: RawLine[];
-}
-
-/**
- * Appends a new Invoice — built through the same `buildInvoice` path as the
- * seed data, so InvoiceItem snapshot fields (name/unit/etc.) are populated
- * from the draft lines at save time (Section 7's historical-integrity rule,
- * Phase 12 acceptance) — to the shared mock array, and advances
- * `Business.nextInvoiceNumber` (Section 7). This is the Invoice feature's
- * "mock repository" write path (Section 9) until a real one lands.
- */
-export function createInvoiceFromDraft(input: CreateInvoiceInput): Invoice {
-  const invoice = buildInvoice({
-    id: generateId(),
-    invoiceNumber: `${mockBusiness.invoicePrefix}${mockBusiness.nextInvoiceNumber}`,
-    customerId: input.customerId,
-    invoiceTypeId: input.invoiceTypeId,
-    issueDate: input.issueDate,
-    dueDate: input.dueDate,
-    notes: input.notes,
-    terms: input.terms,
-    lines: input.lines,
-  });
-  mockInvoices.push(invoice);
-  mockBusiness.nextInvoiceNumber += 1;
-  return invoice;
-}
+// Phase 20 note: this fixture used to also export `createInvoiceFromDraft`
+// (the Invoice feature's write path before `InvoiceRepository` existed).
+// Writes now go through `invoiceRepository.createInvoice()`
+// (`SqliteInvoiceRepository`), which keeps this array in sync instead —
+// see `core/utils/syncCache`. Removed here so nothing can write to this
+// array — and silently desync it from SQLite — by calling the old function.

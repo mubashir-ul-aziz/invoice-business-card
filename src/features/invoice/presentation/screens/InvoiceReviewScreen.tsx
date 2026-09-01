@@ -52,10 +52,10 @@ export function InvoiceReviewScreen() {
     );
   }
 
-  function handleSave() {
-    // Appends the draft to the mock Invoice repository (in-memory only — no
-    // SQLite yet) with InvoiceItem snapshot fields populated, and clears the draft.
-    const savedInvoice = submit();
+  async function handleSave() {
+    // Persists the draft through `invoiceRepository` (SQLite-backed, Phase 20)
+    // with InvoiceItem snapshot fields populated, and clears the draft.
+    const savedInvoice = await submit();
     if (!savedInvoice) return;
 
     // The draft is cleared by `submit()`, so simply navigating would leave

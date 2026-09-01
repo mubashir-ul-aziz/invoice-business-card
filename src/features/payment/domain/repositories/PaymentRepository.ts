@@ -19,6 +19,14 @@ export interface RecordPaymentInput {
  * every caller of it (the Record Payment Zustand store), stays unchanged.
  */
 export interface PaymentRepository {
+  /**
+   * Every payment across every invoice — backs the app-startup cache
+   * hydration (Section 6) and the handful of screens/stores that still
+   * read the shared `mockPayments` fixture directly to cross-reference by
+   * customer (Customer History, the Customers list's balance column).
+   */
+  getPayments(): Promise<Result<Payment[], Failure>>;
+
   /** Payments logged against one invoice, most recent first (Screens 17/18). */
   getPaymentsForInvoice(invoiceId: string): Promise<Result<Payment[], Failure>>;
 

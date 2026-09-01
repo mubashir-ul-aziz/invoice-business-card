@@ -44,3 +44,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ ...result.value, status: 'idle', fieldErrors: {}, errorMessage: undefined });
   },
 }));
+
+/**
+ * Forces the store's live state to match freshly-loaded settings. Needed
+ * once at app startup: `useSettingsStore` is created (and its `...mockAppSettings`
+ * spread captured) the moment this module is first imported — synchronously,
+ * before `initializeDatabase()` can possibly finish reading the real
+ * persisted row — so without this the store would keep showing the
+ * hardcoded fixture defaults until the user changes something. Called from
+ * `src/app/App.tsx`'s boot sequence, never from a screen.
+ */
+export function hydrateSettingsStore(settings: AppSettings): void {
+  useSettingsStore.setState({ ...settings, status: 'idle', fieldErrors: {}, errorMessage: undefined });
+}

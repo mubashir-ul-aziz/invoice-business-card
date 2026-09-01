@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { customerRepository, itemRepository, invoiceTypeRepository } from '../../../../app/di/providers';
+import { customerRepository, itemRepository, invoiceTypeRepository, invoiceRepository } from '../../../../app/di/providers';
 import { mockBusiness } from '../../../business/data/datasources/mock/mockBusiness';
 import { Customer } from '../../../customer/domain/entities/Customer';
 import { Item } from '../../../item/domain/entities/Item';
@@ -7,7 +7,6 @@ import { InvoiceType } from '../../../invoiceType/domain/entities/InvoiceType';
 import { invoiceTypeHasField } from '../../../invoiceType/domain/usecases/resolveInvoiceTypeFields';
 import { generateId } from '../../../../core/utils/idGenerator';
 import { DraftInvoiceLine } from '../../../../app/navigation/types';
-import { createInvoiceFromDraft } from '../../data/datasources/mock/mockInvoices';
 import { Invoice } from '../../domain/entities/Invoice';
 
 export type InvoiceFormReferenceStatus = 'idle' | 'loading' | 'loaded' | 'error';
@@ -46,8 +45,8 @@ interface InvoiceFormState extends InvoiceFormDraft {
   setEditingLineKey: (key: string | undefined) => void;
   setNotes: (notes: string) => void;
   setTerms: (terms: string) => void;
-  /** Screen 16 (Invoice Review) "Save" — appends the draft to the mock repository (Section 9) with InvoiceItem snapshot fields populated, then clears the draft. Returns undefined if the draft isn't save-ready (no customer / no lines). */
-  submit: () => Invoice | undefined;
+  /** Screen 16 (Invoice Review) "Save" — persists the draft through `invoiceRepository` (Section 9) with InvoiceItem snapshot fields populated, then clears the draft. Resolves to undefined if the draft isn't save-ready (no customer / no lines) or the save failed. */
+  submit: () => Promise<Invoice | undefined>;
   /** Seeds a full draft — customer, type, line items, notes, terms — from an existing invoice. Used by Invoice Detail's "Duplicate" action to start a new draft pre-filled from a saved one. */
   loadForDuplicate: (source: { customerId: string; invoiceTypeId: string; lines: DraftInvoiceLine[]; notes?: string; terms?: string }) => void;
 }
@@ -166,11 +165,11 @@ export const useInvoiceFormStore = create<InvoiceFormState>((set, get) => ({
   setNotes: (notes) => set({ notes }),
   setTerms: (terms) => set({ terms }),
 
-  submit: () => {
+  submit: async () => {
     const state = get();
     if (!state.customerId || state.lines.length === 0) return undefined;
 
-    const invoice = createInvoiceFromDraft({
+    const result = await invoiceRepository.createInvoice({
       customerId: state.customerId,
       invoiceTypeId: state.invoiceTypeId,
       issueDate: state.issueDate,
@@ -179,9 +178,10 @@ export const useInvoiceFormStore = create<InvoiceFormState>((set, get) => ({
       terms: state.terms.trim() || undefined,
       lines: state.lines,
     });
+    if (!result.isSuccess) return undefined;
 
     set(defaultDraft(state.invoiceTypeId));
-    return invoice;
+    return result.value;
   },
 
   loadForDuplicate: (source) =>

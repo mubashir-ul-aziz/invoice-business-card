@@ -6,26 +6,34 @@
  *
  * This is where mock-vs-real repository instances get selected: a screen
  * depends only on the repository interface from `features/*\/domain`, and
- * this file decides which implementation (`Mock*Repository` now,
- * `Sqlite*Repository` from Phase 20 on) actually gets constructed —
- * swapping is a one-line change here, never a UI change (Section 9).
+ * this file decides which implementation (`Mock*Repository` through Phase
+ * 19, `Sqlite*Repository` from Phase 20 on) actually gets constructed —
+ * swapping is a one-line change here, never a UI change (Section 9). The
+ * `Mock*Repository` classes remain in the codebase for tests only (Phase 20
+ * acceptance criteria) — nothing below constructs one anymore.
  */
 import { BusinessRepository } from '../../features/business/domain/repositories/BusinessRepository';
-import { MockBusinessRepository } from '../../features/business/data/repositories/mockBusinessRepository';
+import { SqliteBusinessRepository } from '../../features/business/data/repositories/sqliteBusinessRepository';
 import { InvoiceTypeRepository } from '../../features/invoiceType/domain/repositories/InvoiceTypeRepository';
-import { MockInvoiceTypeRepository } from '../../features/invoiceType/data/repositories/mockInvoiceTypeRepository';
+import { SqliteInvoiceTypeRepository } from '../../features/invoiceType/data/repositories/sqliteInvoiceTypeRepository';
 import { ItemRepository } from '../../features/item/domain/repositories/ItemRepository';
-import { MockItemRepository } from '../../features/item/data/repositories/mockItemRepository';
+import { SqliteItemRepository } from '../../features/item/data/repositories/sqliteItemRepository';
 import { CustomerRepository } from '../../features/customer/domain/repositories/CustomerRepository';
-import { MockCustomerRepository } from '../../features/customer/data/repositories/mockCustomerRepository';
+import { SqliteCustomerRepository } from '../../features/customer/data/repositories/sqliteCustomerRepository';
+import { InvoiceRepository } from '../../features/invoice/domain/repositories/InvoiceRepository';
+import { SqliteInvoiceRepository } from '../../features/invoice/data/repositories/sqliteInvoiceRepository';
 import { PaymentRepository } from '../../features/payment/domain/repositories/PaymentRepository';
-import { MockPaymentRepository } from '../../features/payment/data/repositories/mockPaymentRepository';
+import { SqlitePaymentRepository } from '../../features/payment/data/repositories/sqlitePaymentRepository';
 import { SettingsRepository } from '../../features/settings/domain/repositories/SettingsRepository';
-import { MockSettingsRepository } from '../../features/settings/data/repositories/mockSettingsRepository';
+import { SqliteSettingsRepository } from '../../features/settings/data/repositories/sqliteSettingsRepository';
+import { BackupLogRepository } from '../../features/backup/domain/repositories/BackupLogRepository';
+import { SqliteBackupLogRepository } from '../../features/backup/data/repositories/sqliteBackupLogRepository';
 
-export const businessRepository: BusinessRepository = new MockBusinessRepository();
-export const invoiceTypeRepository: InvoiceTypeRepository = new MockInvoiceTypeRepository();
-export const itemRepository: ItemRepository = new MockItemRepository();
-export const customerRepository: CustomerRepository = new MockCustomerRepository();
-export const paymentRepository: PaymentRepository = new MockPaymentRepository();
-export const settingsRepository: SettingsRepository = new MockSettingsRepository();
+export const businessRepository: BusinessRepository = new SqliteBusinessRepository();
+export const invoiceTypeRepository: InvoiceTypeRepository = new SqliteInvoiceTypeRepository();
+export const itemRepository: ItemRepository = new SqliteItemRepository();
+export const customerRepository: CustomerRepository = new SqliteCustomerRepository();
+export const invoiceRepository: InvoiceRepository = new SqliteInvoiceRepository();
+export const paymentRepository: PaymentRepository = new SqlitePaymentRepository();
+export const settingsRepository: SettingsRepository = new SqliteSettingsRepository();
+export const backupLogRepository: BackupLogRepository = new SqliteBackupLogRepository();
