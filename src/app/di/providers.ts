@@ -28,6 +28,8 @@ import { SettingsRepository } from '../../features/settings/domain/repositories/
 import { SqliteSettingsRepository } from '../../features/settings/data/repositories/sqliteSettingsRepository';
 import { BackupLogRepository } from '../../features/backup/domain/repositories/BackupLogRepository';
 import { SqliteBackupLogRepository } from '../../features/backup/data/repositories/sqliteBackupLogRepository';
+import { GoogleDriveBackupRepository } from '../../features/backup/domain/repositories/GoogleDriveBackupRepository';
+import { GoogleDriveBackupRepositoryImpl } from '../../features/backup/data/repositories/googleDriveBackupRepository';
 
 export const businessRepository: BusinessRepository = new SqliteBusinessRepository();
 export const invoiceTypeRepository: InvoiceTypeRepository = new SqliteInvoiceTypeRepository();
@@ -37,3 +39,7 @@ export const invoiceRepository: InvoiceRepository = new SqliteInvoiceRepository(
 export const paymentRepository: PaymentRepository = new SqlitePaymentRepository();
 export const settingsRepository: SettingsRepository = new SqliteSettingsRepository();
 export const backupLogRepository: BackupLogRepository = new SqliteBackupLogRepository();
+export const googleDriveBackupRepository: GoogleDriveBackupRepository = new GoogleDriveBackupRepositoryImpl(
+  backupLogRepository,
+  settingsRepository,
+);

@@ -3,6 +3,7 @@
     "name": "Invora",
     "slug": "Invora",
     "version": "1.0.0",
+    "scheme": "invora",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -36,7 +37,20 @@
           "isAccessMediaLocationEnabled": false
         }
       ],
-      "expo-sqlite"
-    ]
+      "expo-sqlite",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Allow Invora to use Face ID to protect your Google Drive backup connection."
+        }
+      ]
+    ],
+    "extra": {
+      "googleDriveOAuthClientId": {
+        "web": "",
+        "ios": "",
+        "android": ""
+      }
+    }
   }
 }
