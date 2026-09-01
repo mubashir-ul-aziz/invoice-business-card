@@ -76,12 +76,15 @@ export class SqlitePaymentRepository implements PaymentRepository {
         createdAt: now(),
       };
 
+      // Insert + status recalculation (Section 26) run inside one transaction
+      // (Section 21 crash-safety) — otherwise an app kill between the two
+      // statements could leave a persisted Payment row against an Invoice
+      // whose stored `status` never reflects it, until some later write
+      // happens to recompute it.
       db.transaction((tx) => {
         tx.insert(payments).values(payment).run();
+        recalculateInvoiceStatus(tx, input.invoiceId);
       });
-      // Recalculate and persist status (Section 26) — derived once here,
-      // rather than left for every screen that reads `invoice.status` to redo.
-      recalculateInvoiceStatus(db, input.invoiceId);
 
       const allPayments = db.select().from(payments).all();
       syncArray(mockPayments, allPayments.map(paymentFromRow));

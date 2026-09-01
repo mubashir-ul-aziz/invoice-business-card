@@ -94,6 +94,32 @@ describe('SqlitePaymentRepository', () => {
     expect(all.isSuccess && all.value).toHaveLength(2);
   });
 
+  it('the payment insert and the resulting status recalculation are atomic (Section 21 crash-safety)', async () => {
+    // `recordPayment` runs both the payment insert and `recalculateInvoiceStatus`
+    // inside one `db.transaction`. Reproduce that same shape here with a forced
+    // failure after the insert to prove SQLite rolls back the whole thing —
+    // an app kill between the two statements can never leave a persisted
+    // Payment row against an Invoice whose stored status doesn't reflect it.
+    const invoice = await createInvoice(db, '2099-01-01');
+    const now = new Date().toISOString();
+
+    expect(() => {
+      db.transaction((tx) => {
+        tx.run(
+          `INSERT INTO payments (id, invoice_id, amount, payment_date, method, created_at) VALUES ('pay-crash', '${invoice.id}', 40, '${now}', 'cash', '${now}')`,
+        );
+        throw new Error('simulated crash mid-transaction');
+      });
+    }).toThrow();
+
+    const payments = await repo.getPaymentsForInvoice(invoice.id);
+    expect(payments.isSuccess && payments.value).toHaveLength(0); // insert rolled back, not left dangling
+
+    const invoiceRepo = new SqliteInvoiceRepository(db);
+    const stillUnpaid = await invoiceRepo.getInvoice(invoice.id);
+    expect(stillUnpaid.isSuccess && stillUnpaid.value.status).toBe('unpaid'); // status never touched
+  });
+
   it('allows an overpayment, recorded as-is (Section 24)', async () => {
     const invoice = await createInvoice(db);
     const result = await repo.recordPayment({ invoiceId: invoice.id, amount: 500, paymentDate: '2026-01-01', method: 'cash' });

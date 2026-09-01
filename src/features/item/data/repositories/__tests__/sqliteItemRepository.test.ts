@@ -11,6 +11,12 @@ describe('SqliteItemRepository', () => {
     repo = new SqliteItemRepository(db);
   });
 
+  it('starts empty on a freshly migrated, unseeded database (Section 21 empty-database handling)', async () => {
+    const list = await repo.getItems();
+    expect(list.isSuccess).toBe(true);
+    if (list.isSuccess) expect(list.value).toEqual([]);
+  });
+
   it('rejects a create with a negative price', async () => {
     const result = await repo.createItem({ name: 'Widget', defaultPrice: -5 });
     expect(result.isSuccess).toBe(false);

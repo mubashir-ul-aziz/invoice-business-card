@@ -37,6 +37,12 @@ describe('SqliteInvoiceRepository', () => {
     repo = new SqliteInvoiceRepository(db);
   });
 
+  it('starts empty on a freshly migrated, unseeded database (Section 21 empty-database handling)', async () => {
+    const list = await repo.getInvoices();
+    expect(list.isSuccess).toBe(true);
+    if (list.isSuccess) expect(list.value).toEqual([]);
+  });
+
   it('rejects a create with no line items', async () => {
     const { customerId, invoiceTypeId } = await seedPrerequisites(db);
     const result = await repo.createInvoice({
