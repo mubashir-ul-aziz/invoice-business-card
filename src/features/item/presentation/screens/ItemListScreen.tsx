@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
 import { ScreenHeader } from '../../../../core/components/ScreenHeader';
@@ -21,10 +22,16 @@ export function ItemListScreen() {
   const { items, invoiceTypes, status, errorMessage, searchQuery, selectedTypeId, load, setSearchQuery, setSelectedTypeId } =
     useItemListStore();
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Reload on every focus (not just first mount) so an item created/edited
+  // via Create Item and navigated back from is reflected immediately — this
+  // pushed screen stays mounted across that round trip (same convention as
+  // CustomerListScreen's focus reload).
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   const filtered = useMemo(
     () => filterItems(items, searchQuery, selectedTypeId),

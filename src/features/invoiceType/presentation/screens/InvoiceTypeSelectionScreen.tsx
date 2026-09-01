@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
@@ -31,10 +32,15 @@ export function InvoiceTypeSelectionScreen() {
   const { invoiceTypes, selectedId, status, errorMessage, load, select, confirmSelection } =
     useInvoiceTypeSelectionStore();
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Reload on every focus so a custom type created via Screen 6 and
+  // navigated back from is reflected immediately (same convention as
+  // CustomerListScreen's focus reload).
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   // Screen 5 shows the 5 system-defined formats only; a business's own custom
   // types (created via the "Create Custom Type" entry point, Screen 6) live

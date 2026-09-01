@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
@@ -44,7 +45,17 @@ export function CustomerHistoryScreen() {
   const customer = mockCustomers.find((c) => c.id === customerId);
   const [filter, setFilter] = useState<EventFilter>('all');
 
-  const customerInvoices = useMemo(() => mockInvoices.filter((i) => i.customerId === customerId), [customerId]);
+  // Re-run on every focus so a payment/invoice recorded elsewhere and
+  // navigated back from is reflected here — same convention as
+  // InvoiceDetailScreen's focus reload.
+  const [refreshKey, setRefreshKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshKey((key) => key + 1);
+    }, []),
+  );
+
+  const customerInvoices = useMemo(() => mockInvoices.filter((i) => i.customerId === customerId), [customerId, refreshKey]);
   const customerInvoiceIds = useMemo(() => new Set(customerInvoices.map((i) => i.id)), [customerInvoices]);
   const customerPayments = useMemo(
     () => mockPayments.filter((p) => customerInvoiceIds.has(p.invoiceId)),

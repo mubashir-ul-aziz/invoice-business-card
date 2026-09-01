@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
 import { SearchBar } from '../../../../core/components/SearchBar';
@@ -26,7 +27,18 @@ export function InvoiceListScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<InvoiceStatus | 'all'>('all');
 
-  const customerNameById = useMemo(() => new Map(mockCustomers.map((c) => [c.id, c.name])), []);
+  // This tab-root screen stays mounted while Create Invoice/Invoice Detail
+  // are pushed on top of it; re-run on every focus so an invoice
+  // created/edited there and navigated back from is reflected immediately —
+  // same convention as InvoiceDetailScreen's focus reload.
+  const [refreshKey, setRefreshKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshKey((key) => key + 1);
+    }, []),
+  );
+
+  const customerNameById = useMemo(() => new Map(mockCustomers.map((c) => [c.id, c.name])), [refreshKey]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -38,7 +50,7 @@ export function InvoiceListScreen() {
         return invoice.invoiceNumber.toLowerCase().includes(q) || customerName.includes(q);
       })
       .sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1));
-  }, [query, filter, customerNameById]);
+  }, [query, filter, customerNameById, refreshKey]);
 
   return (
     <ScreenContainer>

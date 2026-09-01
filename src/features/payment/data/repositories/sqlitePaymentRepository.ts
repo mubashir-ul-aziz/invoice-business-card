@@ -9,7 +9,7 @@ import { syncArray } from '../../../../core/utils/syncCache';
 import { getDb } from '../../../../database/client';
 import type { AnyInvoraDb } from '../../../../database/migrate';
 import { payments, invoices, invoiceItems } from '../../../../database/schema';
-import { paymentFromRow, invoiceFromRow, now } from '../../../../database/mappers';
+import { paymentFromRow, invoicesFromRows, now } from '../../../../database/mappers';
 import { recalculateInvoiceStatus } from '../../../invoice/data/repositories/sqliteInvoiceRepository';
 import { mockPayments } from '../datasources/mock/mockPayments';
 import { mockInvoices } from '../../../invoice/data/datasources/mock/mockInvoices';
@@ -91,7 +91,7 @@ export class SqlitePaymentRepository implements PaymentRepository {
 
       const invoiceRows = db.select().from(invoices).all();
       const itemRows = db.select().from(invoiceItems).all();
-      syncArray(mockInvoices, invoiceRows.map((row) => invoiceFromRow(row, itemRows)));
+      syncArray(mockInvoices, invoicesFromRows(invoiceRows, itemRows));
 
       const paymentEntity: Payment = {
         id,

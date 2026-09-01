@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
@@ -26,7 +27,18 @@ export function DashboardScreen() {
   const navigation = useAppNavigation();
   const { isDesktop } = useResponsive();
 
-  const monthOptions = useMemo(() => getInvoiceMonthOptions(mockInvoices), []);
+  // Tab-root screen that stays mounted while Invoices/Customers/Create
+  // Invoice are pushed/switched to; re-run on every focus so a newly
+  // created/edited invoice, payment, or customer is reflected here without
+  // a remount — same convention as CustomerListScreen's focus reload.
+  const [refreshKey, setRefreshKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshKey((key) => key + 1);
+    }, []),
+  );
+
+  const monthOptions = useMemo(() => getInvoiceMonthOptions(mockInvoices), [refreshKey]);
   const selectedMonthKey = useDashboardStore((s) => s.selectedMonthKey) ?? monthOptions[0]?.key ?? null;
   const selectMonth = useDashboardStore((s) => s.selectMonth);
   const selectedIndex = monthOptions.findIndex((option) => option.key === selectedMonthKey);
@@ -38,13 +50,13 @@ export function DashboardScreen() {
 
   const monthInvoices = useMemo(
     () => (selectedMonth ? filterInvoicesByMonth(mockInvoices, selectedMonth.key) : mockInvoices),
-    [selectedMonth],
+    [selectedMonth, refreshKey],
   );
-  const summary = useMemo(() => computeDashboardSummary(monthInvoices, mockPayments), [monthInvoices]);
-  const customerNameById = useMemo(() => new Map(mockCustomers.map((c) => [c.id, c.name])), []);
+  const summary = useMemo(() => computeDashboardSummary(monthInvoices, mockPayments), [monthInvoices, refreshKey]);
+  const customerNameById = useMemo(() => new Map(mockCustomers.map((c) => [c.id, c.name])), [refreshKey]);
   const recentInvoices = useMemo(
     () => [...mockInvoices].sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1)).slice(0, 5),
-    [],
+    [refreshKey],
   );
 
   return (
@@ -73,10 +85,10 @@ export function DashboardScreen() {
         )}
 
         <View style={[styles.statGrid, isDesktop && styles.statGridDesktop]}>
-          <StatCard label="Total Sales" value={formatCurrency(summary.totalSales, 'USD')} />
-          <StatCard label="Paid" value={formatCurrency(summary.totalPaid, 'USD')} tone="success" />
-          <StatCard label="Outstanding" value={formatCurrency(summary.totalOutstanding, 'USD')} tone="warning" />
-          <StatCard label="Overdue" value={formatCurrency(summary.totalOverdue, 'USD')} tone="danger" />
+          <StatCard label="Total Sales" value={formatCurrency(summary.totalSales, mockBusiness.currencyCode)} />
+          <StatCard label="Paid" value={formatCurrency(summary.totalPaid, mockBusiness.currencyCode)} tone="success" />
+          <StatCard label="Outstanding" value={formatCurrency(summary.totalOutstanding, mockBusiness.currencyCode)} tone="warning" />
+          <StatCard label="Overdue" value={formatCurrency(summary.totalOverdue, mockBusiness.currencyCode)} tone="danger" />
         </View>
 
         <Card style={styles.invoiceCountCard}>

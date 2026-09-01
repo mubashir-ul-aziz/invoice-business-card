@@ -10,7 +10,7 @@ import { syncArray, syncObject } from '../../../../core/utils/syncCache';
 import { getDb } from '../../../../database/client';
 import type { AnyInvoraDb } from '../../../../database/migrate';
 import { invoices, invoiceItems, businesses, payments } from '../../../../database/schema';
-import { invoiceFromRow, paymentFromRow, businessFromRow, now } from '../../../../database/mappers';
+import { invoiceFromRow, invoicesFromRows, paymentFromRow, businessFromRow, now } from '../../../../database/mappers';
 import { mockInvoices } from '../datasources/mock/mockInvoices';
 import { mockBusiness } from '../../../business/data/datasources/mock/mockBusiness';
 
@@ -26,7 +26,7 @@ function validate(input: CreateInvoiceInput): Record<string, string> {
 function reloadAll(db: AnyInvoraDb): Invoice[] {
   const invoiceRows = db.select().from(invoices).all();
   const itemRows = db.select().from(invoiceItems).all();
-  const list = invoiceRows.map((row) => invoiceFromRow(row, itemRows));
+  const list = invoicesFromRows(invoiceRows, itemRows);
   syncArray(mockInvoices, list);
   return list;
 }

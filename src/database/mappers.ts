@@ -131,6 +131,28 @@ export function invoiceFromRow(
   };
 }
 
+/**
+ * Maps a full invoice-list read to domain entities in O(N+M) instead of
+ * O(N*M): `invoiceFromRow` alone re-filters the *entire* `itemRows` array
+ * per invoice, which is fine for one invoice (`getInvoice`) but quadratic
+ * once called per-row over every invoice in the database (`getInvoices`,
+ * and the invoice-list resync after recording a payment) — grouping once
+ * up front keeps list reads/writes fast as the invoice count grows
+ * (Section 4 performance principle).
+ */
+export function invoicesFromRows(
+  invoiceRows: (typeof schema.invoices.$inferSelect)[],
+  itemRows: (typeof schema.invoiceItems.$inferSelect)[],
+): Invoice[] {
+  const itemsByInvoiceId = new Map<string, (typeof schema.invoiceItems.$inferSelect)[]>();
+  for (const item of itemRows) {
+    const bucket = itemsByInvoiceId.get(item.invoiceId);
+    if (bucket) bucket.push(item);
+    else itemsByInvoiceId.set(item.invoiceId, [item]);
+  }
+  return invoiceRows.map((row) => invoiceFromRow(row, itemsByInvoiceId.get(row.id) ?? []));
+}
+
 // ---- Payment ----
 
 export function paymentFromRow(row: typeof schema.payments.$inferSelect): Payment {

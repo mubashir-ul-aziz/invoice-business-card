@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
@@ -24,13 +25,25 @@ const WHATSAPP_GREEN_BG = '#DCF8C6';
 export function CustomerDetailScreen() {
   const navigation = useAppNavigation();
   const { customerId } = useAppRoute<'CustomerDetail'>().params;
+
+  // Pushed from Customer List and stays mounted while Record Payment/Create
+  // Invoice are pushed on top of it; re-run on every focus so a payment or
+  // invoice recorded there and navigated back from is reflected here —
+  // same convention as InvoiceDetailScreen's focus reload.
+  const [refreshKey, setRefreshKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshKey((key) => key + 1);
+    }, []),
+  );
+
   const customer = mockCustomers.find((c) => c.id === customerId);
 
   const invoices = useMemo(
     () => mockInvoices.filter((i) => i.customerId === customerId).sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1)),
-    [customerId],
+    [customerId, refreshKey],
   );
-  const financials = useMemo(() => computeCustomerFinancials(invoices, mockPayments), [invoices]);
+  const financials = useMemo(() => computeCustomerFinancials(invoices, mockPayments), [invoices, refreshKey]);
   const payableInvoice = useMemo(() => invoices.find((i) => i.status !== 'paid') ?? invoices[0], [invoices]);
 
   if (!customer) {

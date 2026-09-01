@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../../../app/theme/theme';
 import { ScreenContainer } from '../../../../core/components/ScreenContainer';
@@ -54,6 +55,20 @@ export function BusinessScreen() {
   const navigation = useAppNavigation();
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(mockAppSettings.cloudBackupEnabled);
   const [backingUp, setBackingUp] = useState(false);
+
+  // Tab-root screen that stays mounted while Create Business (edit) is
+  // pushed on top of it; re-run on every focus so a saved profile edit is
+  // reflected immediately — same convention as InvoiceDetailScreen's focus
+  // reload. mockBusiness/mockAppSettings are read directly below (not
+  // memoized), so simply forcing a re-render is enough to pick up the
+  // latest values.
+  const [, setRefreshKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setCloudSyncEnabled(mockAppSettings.cloudBackupEnabled);
+      setRefreshKey((key) => key + 1);
+    }, []),
+  );
 
   const paymentTermsLabel =
     PAYMENT_TERMS_OPTIONS.find((o) => o.days === mockAppSettings.defaultPaymentTermsDays)?.label ??

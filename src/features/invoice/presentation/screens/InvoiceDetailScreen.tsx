@@ -102,7 +102,12 @@ export function InvoiceDetailScreen() {
     { icon: 'mail-outline', label: 'Email', onPress: () => navigation.navigate('InvoiceSharing', { invoiceId }) },
     { icon: 'link-outline', label: 'Share link', onPress: () => navigation.navigate('InvoiceSharing', { invoiceId }) },
     { icon: 'cash-outline', label: 'Record payment', onPress: () => navigation.navigate('RecordPayment', { invoiceId }) },
-    { icon: 'create-outline', label: 'Edit', onPress: () => navigation.navigate('CreateInvoiceCustomer') },
+    // Editing a saved invoice in place isn't implemented (no update-by-id
+    // repository method exists) — this previously navigated to a blank
+    // Create Invoice flow with the invoiceId silently dropped, which looked
+    // like "Edit" but actually started an unrelated new invoice. Removed
+    // rather than left misleading; "Duplicate" below is the supported way
+    // to start a new invoice prefilled from this one.
     { icon: 'copy-outline', label: 'Duplicate', onPress: () => setShowDuplicateConfirm(true) },
   ];
 
